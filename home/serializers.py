@@ -1,13 +1,19 @@
 from rest_framework import serializers
 from .models import Person , Color
 
+
+class loginSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    password = serializers.CharField()
+
+    
 class ColorSerializer(serializers.ModelSerializer):
     class Meta:
         model = Color
-        fields = ['color_name']
+        fields = '__all__'
 
 class PeopleSerializer(serializers.ModelSerializer):
-    color = ColorSerializer()
+    color = serializers.PrimaryKeyRelatedField(queryset=Color.objects.all())
     class Meta:
         model = Person
         fields = '__all__'
