@@ -53,6 +53,7 @@ class LoginView(APIView):
                                 samesite="None")
             return response
         return Response( serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+  
         
 class LogoutView(APIView):
     

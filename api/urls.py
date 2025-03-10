@@ -14,5 +14,4 @@ urlpatterns = [
     path('register/', RegisterAPI.as_view(), name='register-api'),  # ✅ Correct
     path('login/', loginAPI.as_view(), name='login-api'),  # ✅ Correct
     path('users/',include("users.urls"))
-
 ]
