@@ -1,6 +1,6 @@
 from rest_framework.generics import RetrieveUpdateAPIView  ,CreateAPIView
 from rest_framework.permissions import IsAuthenticated
-from .serializers import CustomUserSerializer ,RegisterUserSerializer , LoginUserSerializer
+from .serializers import CustomUserSerializer ,RegisterUserSerializer , LoginUserSerializer ,BlogSerializer
 from django.contrib.auth import get_user_model
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
@@ -8,7 +8,9 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework_simplejwt.views import TokenRefreshView
 from rest_framework_simplejwt.exceptions import InvalidToken ,TokenError 
-
+from .models import Blog
+from django.shortcuts import get_object_or_404
+from django.db.models import Q
 User = get_user_model()
 
 class UserInfoView(RetrieveUpdateAPIView):
@@ -127,45 +129,56 @@ class CookieTokenRefreshView(TokenRefreshView):
         except (InvalidToken, TokenError, User.DoesNotExist):
             return Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
    
-        # Retrieve refresh token from cookies
-        refresh_token = request.COOKIES.get("refresh_token")
 
-        if not refresh_token:
-            return Response({"error": "Refresh token not provided"}, status=status.HTTP_401_UNAUTHORIZED)
+# blog  operations
+# List and Create Blogs
+class BlogListCreateAPIView(APIView):
 
-        try:
-            # Generate new tokens
-            refresh = RefreshToken(refresh_token)
-            new_access_token = str(refresh.access_token)
-            new_refresh_token = str(RefreshToken.for_user(refresh.user))
-
-            # Print tokens for debugging
-            print(new_refresh_token, "new refresh token")
-            print(new_access_token, "new access token")
-
-            # Create response
-            response = Response(
-                {"message": "Access and refresh tokens refreshed successfully"},
-                status=status.HTTP_200_OK,
+    def get(self, request):
+        query = request.query_params.get("search",None) # search parameters
+        print(query,"queryqueryqueryqueryquery")
+        # optimize related data fetching
+        blogs = Blog.objects.all()
+        # Apply search filters if query is provided
+        if query:
+            blogs = blogs.filter(
+                Q(title__icontains=query) |  # Search by title
+                Q(content__icontains=query)|   # Search by content
+                Q(author__email__icontains=query)  # Search by author username
             )
+        serializer = BlogSerializer(blogs, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
-            # Set updated access and refresh tokens in cookies
-            response.set_cookie(
-                key="access_token",
-                value=new_access_token,
-                httponly=True,
-                secure=True,
-                samesite="None",
-            )
-            response.set_cookie(
-                key="refresh_token",
-                value=new_refresh_token,
-                httponly=True,
-                secure=True,
-                samesite="None",
-            )
+    def post(self, request):
+        serializer = BlogSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(author=request.user)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-            return response
+# Retrieve, Update, and Delete Blog
+class BlogDetailAPIView(APIView):
+    permission_classes = [IsAuthenticated]
 
-        except InvalidToken:
-            return Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
+    def get_object(self, pk):
+        return get_object_or_404(Blog, pk=pk)
+
+    def get(self, request, pk):
+        blog = self.get_object(pk)
+        serializer = BlogSerializer(blog)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def put(self, request, pk):
+        blog = self.get_object(pk)
+        self.check_object_permissions(request, blog)
+        serializer = BlogSerializer(blog, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk):
+        blog = self.get_object(pk)
+        self.check_object_permissions(request, blog)
+        blog.delete()
+        return Response({"message": "Blog deleted successfully"}, status=status.HTTP_204_NO_CONTENT)

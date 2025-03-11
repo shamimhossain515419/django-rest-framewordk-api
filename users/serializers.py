@@ -33,4 +33,15 @@ class LoginUserSerializer(Serializer):
         raise serializers.ValidationError("Incorrect credentials!")
 
 
+from rest_framework import serializers
+from .models import Blog
+
+class BlogSerializer(serializers.ModelSerializer):
+    author_email = serializers.EmailField(source="author.email", read_only=True)
+    class Meta:
+        model = Blog
+        fields = ["id", "author", "author_email", "title", "content", "created_at", "updated_at"]
+        read_only_fields = ["author"]
+
+
 
