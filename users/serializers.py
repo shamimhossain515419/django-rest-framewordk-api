@@ -3,10 +3,10 @@ from rest_framework.serializers import ModelSerializer, Serializer
 from .models import CustomUser
 from rest_framework import serializers
 from django.contrib.auth import authenticate
+from .models import Blog
 
 
 class CustomUserSerializer(ModelSerializer):
-    
     class Meta:
         model = CustomUser
         fields =("id", "email", "username")
@@ -33,8 +33,6 @@ class LoginUserSerializer(Serializer):
         raise serializers.ValidationError("Incorrect credentials!")
 
 
-from rest_framework import serializers
-from .models import Blog
 
 class BlogSerializer(serializers.ModelSerializer):
     author_email = serializers.EmailField(source="author.email", read_only=True)

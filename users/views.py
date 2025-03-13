@@ -1,17 +1,20 @@
 from rest_framework.generics import RetrieveUpdateAPIView  ,CreateAPIView
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated , AllowAny ,OR
 from .serializers import CustomUserSerializer ,RegisterUserSerializer , LoginUserSerializer ,BlogSerializer
 from django.contrib.auth import get_user_model
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
 from rest_framework.response import Response
 from rest_framework import status
+from .permissions import IsAdmin,  IsAdminOrManager ,IsManager
+
 from rest_framework_simplejwt.views import TokenRefreshView
 from rest_framework_simplejwt.exceptions import InvalidToken ,TokenError 
 from .models import Blog
 from django.shortcuts import get_object_or_404
 from django.db.models import Q
 User = get_user_model()
+
 
 class UserInfoView(RetrieveUpdateAPIView):
     permission_classes = [IsAuthenticated]  # Ensure the user is authenticated
@@ -26,10 +29,12 @@ class UserInfoView(RetrieveUpdateAPIView):
         return self.request.user
 
 class UserRegistrationView(CreateAPIView):
+    permission_classes = [AllowAny]  # Override IsAuthenticated
     serializer_class = RegisterUserSerializer
 
 
 class LoginView(APIView):
+    permission_classes = [AllowAny]  # Override IsAuthenticated
     def post(self, request):
         serializer = LoginUserSerializer(data=request.data)
         
@@ -133,10 +138,9 @@ class CookieTokenRefreshView(TokenRefreshView):
 # blog  operations
 # List and Create Blogs
 class BlogListCreateAPIView(APIView):
-
+    permission_classes = [IsAuthenticated, IsAdminOrManager]  # Ensure the user is authenticated
     def get(self, request):
         query = request.query_params.get("search",None) # search parameters
-        print(query,"queryqueryqueryqueryquery")
         # optimize related data fetching
         blogs = Blog.objects.all()
         # Apply search filters if query is provided
@@ -147,7 +151,11 @@ class BlogListCreateAPIView(APIView):
                 Q(author__email__icontains=query)  # Search by author username
             )
         serializer = BlogSerializer(blogs, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+       
+
+        return Response(
+          {"data": serializer.data, "status": "success"},
+          status=status.HTTP_200_OK)
 
     def post(self, request):
         serializer = BlogSerializer(data=request.data)
@@ -182,3 +190,8 @@ class BlogDetailAPIView(APIView):
         self.check_object_permissions(request, blog)
         blog.delete()
         return Response({"message": "Blog deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
+    
+
+
+
+

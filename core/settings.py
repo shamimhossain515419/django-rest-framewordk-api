@@ -153,14 +153,12 @@ REST_FRAMEWORK = {
 
 # authentication 
 REST_FRAMEWORK = {
-
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'users.authentication.CookieJWTAuthentication',
     ),
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
     ),
-    
 }
 # jwt templates start
 SIMPLE_JWT = {
